@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Secure Member Login</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
+</head>
+
+<body class="bg-gray-100 font-sans">
+  <div class="flex flex-col items-center justify-center min-h-screen px-4">
+    <div class="bg-white shadow-lg rounded-lg p-8 w-full max-w-md">
+      <div class="mb-6 text-center">
+        <h1 class="text-2xl font-bold text-gray-800">Member Login</h1>
+        <p class="text-sm text-gray-500 mt-1">Secure access to your account</p>
+      </div>
+      <form id="loginForm" class="space-y-5">
+        <div>
+          <label for="username" class="block text-sm font-medium text-gray-700">Username</label>
+          <input type="text" id="username" required
+            class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600" />
+        </div>
+        <div>
+          <label for="password" class="block text-sm font-medium text-gray-700">Password</label>
+          <input type="password" id="password" required
+            class="mt-1 w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-red-600" />
+        </div>
+        <div class="g-recaptcha" data-sitekey="6LcMXDcrAAAAAPF1TYFkiN4zsq8nT_B1Q4x5uq-D"></div>
+        <p id="message" class="text-center text-sm mt-2 text-red-500"></p>
+        <button type="submit"
+          class="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded focus:outline-none">
+          Log In
+        </button>
+      </form>
+      <div class="text-center mt-4 text-sm">
+        <a href="#" class="text-red-600 hover:underline">Forgot password?</a> |
+        <a href="#" class="text-red-600 hover:underline">Create account</a>
+      </div>
+    </div>
+
+    <!-- User Info Display -->
+    <div id="userInfo" class="bg-white shadow-md rounded-lg p-6 mt-8 w-full max-w-3xl hidden">
+      <h2 class="text-xl font-bold text-gray-800 mb-4">User Details</h2>
+      <div id="userData" class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-700">
+        <!-- Filled dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('loginForm');
+    const message = document.getElementById('message');
+    const userInfo = document.getElementById('userInfo');
+    const userData = document.getElementById('userData');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      message.textContent = '';
+      userInfo.classList.add('hidden');
+      userData.innerHTML = '';
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const recaptchaResponse = grecaptcha.getResponse();
+
+      if (!recaptchaResponse) {
+        message.textContent = 'Please complete the CAPTCHA.';
+        return;
+      }
+
+      try {
+        const res = await fetch('https://elastic.snaplogic.com/api/1/rest/slsched/feed/Partners/Credera/diptam%20dutta/Login_pipeline%20Task', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ShiSPZop81KZED0NG7rwcfos6NaZU1Pc'
+          },
+          body: JSON.stringify({ username, password, recaptcha: recaptchaResponse })
+        });
+
+        const result = await res.json();
+        const user = Array.isArray(result) ? result[0] : result;
+
+        if (user && user.userName) {
+          message.classList.remove('text-red-500');
+          message.classList.add('text-green-600');
+          message.textContent = 'Login successful.';
+
+          for (const [key, value] of Object.entries(user)) {
+            if (typeof value === 'object') continue;
+            const div = document.createElement('div');
+            div.innerHTML = `
+              <div class="font-semibold">${key}</div>
+              <div class="text-gray-900 col-span-1 sm:col-span-1 break-words">${value}</div>
+            `;
+            userData.appendChild(div);
+          }
+          userInfo.classList.remove('hidden');
+        } else {
+          message.textContent = result.message || 'Login failed.';
+        }
+      } catch (err) {
+        console.error(err);
+        message.textContent = 'Server error. Please try again.';
+      }
+    });
+  </script>
+</body>
+
+</html>
